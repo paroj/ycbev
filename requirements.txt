@@ -1,0 +1,3 @@
+zstandard
+opencv-python
+scipy
