@@ -6,6 +6,8 @@ The dataset consists of 21 synchronized event and RGB-D sequences, amounting to 
 
 https://arxiv.org/abs/2309.08482
 
+[![video](https://img.youtube.com/vi/xq_fDXq6Sfw/0.jpg)](https://www.youtube.com/watch?v=xq_fDXq6Sfw)
+
 ## Citation
 
 ```bibtex
