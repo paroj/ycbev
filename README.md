@@ -20,3 +20,7 @@ https://arxiv.org/abs/2309.08482
       primaryClass={cs.CV}
 }
 ```
+
+## Download
+
+https://github.com/paroj/ycbev/releases/tag/v1
