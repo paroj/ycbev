@@ -9,57 +9,15 @@ import copy
 
 import cv2
 import numpy as np
-import zstandard
 
 from scipy.spatial.transform import Rotation as R
 from scipy.spatial.transform import Slerp
 
+import ycbev
+
 seq_path = Path("./06")
 
 rgb_delta_t = 1000000//30
-
-class EventFrameProcessor:
-    def __init__(self, cameracalib, stereocalib):
-        ## stereo calibration
-        T_c2ev = np.eye(4)
-        calib_stereo = json.load(open(stereocalib))
-        T_c2ev[:3, :3] = calib_stereo["R_c2ev"]
-        T_c2ev[:3, 3] = np.array(calib_stereo["t_c2ev"]).ravel()
-
-        ## intrinsic calibration
-        calib = json.load(open(cameracalib))
-        self.K = np.float32(calib["camera_matrix"])
-        self.cdist = np.float32(calib["distortion_coefficients"])
-
-        self.T_c2ev = T_c2ev
-
-    def transform_poses(self, poses):
-        ret = copy.deepcopy(poses) # dont modify source
-        for pose in ret:
-            T_m2c = np.eye(4)
-            T_m2c[:3, :3] = pose["cam_R_m2c"]
-            T_m2c[:3, 3] = pose["cam_t_m2c"]
-            T_m2c = self.T_c2ev.dot(T_m2c)
-            pose["cam_R_m2c"] = T_m2c[:3, :3]
-            pose["cam_t_m2c"] = T_m2c[:3, 3]
-        return ret
-
-def load_event_data(path):
-    t = time.time()
-    dctx = zstandard.ZstdDecompressor() 
-    bytes = dctx.decompress(path.read_bytes())
-    data = np.frombuffer(bytes, np.int32).reshape(-1, 2)
-
-    XMASK = 0x3FFF
-    YMASK = 0x3FFF << 14
-    PMASK = 0xF << 28
-
-    xs = data[:, 1] & XMASK
-    ys = (data[:, 1] & YMASK) >> 14
-    ps = (data[:, 1] & PMASK) >> 28
-    print("unpacked data in", time.time() - t)
-
-    return data[:, 0], xs, ys, ps
 
 def slerp(R0, R1, a):
     """
@@ -95,11 +53,15 @@ def main():
 
     height, width = 720, 1280
 
-    ts, xs, ys, ps = load_event_data(Path(seq_path.stem + "_events.int32.zst"))
+    t = time.time()
+    ts, xs, ys, ps = ycbev.load_event_data(Path(seq_path.stem + "_events.int32.zst"))
+    print("unpacked data in", time.time() - t)
 
-    event_frame = EventFrameProcessor(seq_path / "../calib_prophesee.json", seq_path / "../calib_stereo_c2ev.json")
+    event_frame = ycbev.EventFrameAligner(seq_path / "../calib_prophesee.json", seq_path / "../calib_stereo_c2ev.json")
 
     seq_poses = json.load((seq_path / "scene_gt.json").open("r"))
+
+    obj_xyzs = {}
 
     while True:
         im = np.zeros((height, width, 3), dtype=np.uint8)
@@ -108,9 +70,16 @@ def main():
         im[ys[start_idx:end_idx], xs[start_idx:end_idx], ps[start_idx:end_idx]] = 200
 
         poses = lerp_poses(seq_poses, max_t)
-        poses = event_frame.transform_poses(poses)
+        poses = event_frame.align_rgb_poses(poses)
 
         for o in poses:
+            # bbox
+            if o["obj_id"] not in obj_xyzs:
+                obj_xyzs[o["obj_id"]] = ycbev.read_ply_xyz(seq_path / f"../ycbv_models/models_eval/obj_{o['obj_id']:06d}.ply")
+            
+            bbox = ycbev.bbox_from_xyz(event_frame.K, event_frame.cdist, np.array(o["cam_R_m2c"]), np.array(o["cam_t_m2c"]), obj_xyzs[o["obj_id"]])
+            cv2.rectangle(im, bbox[0], bbox[1], (0, 0, 255), 2)
+
             # 10 cm sized axes
             cv2.drawFrameAxes(im, event_frame.K, event_frame.cdist, o["cam_R_m2c"], o["cam_t_m2c"], 100)
 
