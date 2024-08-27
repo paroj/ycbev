@@ -9,7 +9,13 @@ import cv2
 
 import zstandard
 
+FRAME_TIME_RGB = 1000000//30 # μs
+
 def load_event_data(path):
+    """
+    Load event data from a zstd compressed file
+    @return ts, xs, ys, ps: timestamps, x, y, polarity
+    """
     dctx = zstandard.ZstdDecompressor() 
     bytes_ = dctx.decompress(path.read_bytes())
     data = np.frombuffer(bytes_, np.int32).reshape(-1, 2)
@@ -23,6 +29,19 @@ def load_event_data(path):
     ps = (data[:, 1] & PMASK) >> 28
 
     return data[:, 0], xs, ys, ps
+
+def undistort_event_data(ts, xs, ys, ps, K, cdist, imsize, Knew):
+    """
+    transforms event coordinates to compensate for lens distortion and crop to image size
+    
+    @note if you are using event-histograms, undistorting the histogram image using cv2.undistort is preferable
+    """
+    pt2d = np.vstack((xs, ys))
+    pt2d = cv2.undistortPoints(pt2d.astype(np.float32), K, cdist, None, None, Knew)
+    pt2d = pt2d.reshape(-1,2).astype(np.uint32)
+    mask = (pt2d[:, 0] < imsize[0]) & (pt2d[:, 1] < imsize[1])
+    xs, ys = pt2d[mask].T.astype(np.int32)
+    return ts[mask], xs, ys, ps[mask]
 
 class EventFrameAligner:
     def __init__(self, calib_ev, calib_rig):
@@ -51,6 +70,9 @@ class EventFrameAligner:
         return ret
 
 def align_depth_to_rgb(depth, calib_rgbd):
+    """
+    remap depth to rgb image coordinates
+    """
     K = np.float32(calib_rgbd["camera_matrix"])
     Kd = np.float32(calib_rgbd["depth_camera_matrix"])
     cdist = np.float32(calib_rgbd["distortion_coefficients"])
