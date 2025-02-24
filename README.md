@@ -28,5 +28,4 @@ https://arxiv.org/abs/2309.08482
 
 ## Download
 
-- new annotations: https://github.com/paroj/ycbev/releases/tag/v1.1
-- base dataset: https://github.com/paroj/ycbev/releases/tag/v1
+Now on Huggingface: https://huggingface.co/datasets/paroj/ycbev
