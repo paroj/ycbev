@@ -16,13 +16,16 @@ https://arxiv.org/abs/2309.08482
 ## Citation
 
 ```bibtex
-@misc{rojtberg2023ycbev,
-      title={YCB-Ev: Event-vision dataset for 6DoF object pose estimation}, 
-      author={Pavel Rojtberg and Thomas Pöllabauer},
-      year={2023},
-      eprint={2309.08482},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV}
+@InProceedings{rojtberg2025ycbev,
+    author="Rojtberg, Pavel
+    and P{\"o}llabauer, Thomas",
+    title="YCB-Ev 1.1: Event-Vision Dataset for 6DoF Object Pose Estimation",
+    booktitle="Computer Vision -- ECCV 2024 Workshops",
+    year="2025",
+    publisher="Springer Nature Switzerland",
+    pages="1--13",
+    isbn="978-3-031-91569-7",
+    doi="10.1007/978-3-031-91569-7_1"
 }
 ```
 
