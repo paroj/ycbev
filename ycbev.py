@@ -30,6 +30,24 @@ def load_event_data(path):
 
     return data[:, 0], xs, ys, ps
 
+def write_event_data(path, ts, xs, ys, ps):
+    """
+    Write event data to a zstd compressed file
+    @param ts: timestamps in microseconds
+    @param xs: x coordinates
+    @param ys: y coordinates
+    @param ps: polarities (0 or 1)
+    """
+    B14MASK = 0x3FFF
+
+    data = np.empty((len(ts), 2), dtype=np.int32)
+    data[:, 0] = ts
+    data[:, 1] = (xs & B14MASK) | ((ys & B14MASK) << 14) | ((ps & 0xF) << 28)
+
+    dctx = zstandard.ZstdCompressor(threads=-1)
+    with open(path, "wb") as f:
+        f.write(dctx.compress(data.tobytes()))
+
 def undistort_event_data(ts, xs, ys, ps, K, cdist, imsize, Knew):
     """
     transforms event coordinates to compensate for lens distortion and crop to image size
