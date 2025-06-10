@@ -1,6 +1,12 @@
 # YCB-Ev Dataset
 
 > [!NOTE]
+> 2025-10-06: the data loading and processing parts are now available on pypi for easy integration in your projects:
+> ```bash
+> pip install ycbev_toolkit
+> ```
+
+> [!NOTE]
 > 2024-09-18: we have released YCB-Ev 1.1 with improved annotations and exteded supplementary programs. Please download the updated annotations from the link below.
 
 The YCB-Ev dataset contains synchronized RGB-D frames and event data that enables evaluating 6DoF object pose estimation algorithms using these modalities.
