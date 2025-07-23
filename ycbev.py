@@ -42,7 +42,7 @@ def write_event_data(path, ts, xs, ys, ps):
 
     data = np.empty((len(ts), 2), dtype=np.int32)
     data[:, 0] = ts
-    data[:, 1] = (xs & B14MASK) | ((ys & B14MASK) << 14) | ((ps & 0xF) << 28)
+    data[:, 1] = (xs & B14MASK) | ((np.int32(ys) & B14MASK) << 14) | ((np.int32(ps) & 0xF) << 28)
 
     dctx = zstandard.ZstdCompressor(threads=-1)
     with open(path, "wb") as f:
