@@ -1,7 +1,6 @@
 # @author Pavel Rojtberg
 # SPDX-License-Identifier: MIT
 
-import bisect
 import time
 from pathlib import Path
 import json
@@ -47,12 +46,8 @@ def lerp_poses(seq_poses, curr_t):
     return poses0
 
 def main():
-    event_fps = 30  # sample event data to this frame rate
-    delta_t=1000000//event_fps
-    start_idx = 0
-    max_t = delta_t
-
-    height, width = 720, 1280
+    imsize = (1280, 720)
+    fps = 30
 
     t = time.time()
     ts, xs, ys, ps = ycbev.load_event_data(Path(seq_path.stem + "_events.int32.zst"))
@@ -61,7 +56,6 @@ def main():
     event_frame = ycbev.EventFrameAligner(seq_path / "../calib_prophesee.json", seq_path / "../calib_stereo_c2ev.json")
 
     if undistort_events:
-        imsize = (width, height)
         Knew = cv2.getOptimalNewCameraMatrix(event_frame.K, event_frame.cdist, imsize, 0)[0]
         t = time.time()
         ts, xs, ys, ps = ycbev.undistort_event_data(ts, xs, ys, ps, event_frame.K, event_frame.cdist, imsize, Knew)
@@ -73,16 +67,14 @@ def main():
 
     obj_xyzs = {}
 
+    ev_surface = ycbev.EvSurfaceConverter((ts, xs, ys, ps), imsize, surface_fps=fps)
+
     while True:
-        im = np.zeros((height, width, 3), dtype=np.uint8)
-        end_idx = bisect.bisect(ts, max_t, lo=start_idx)
-        
-        if start_idx == end_idx:
+        ret, im = ev_surface.read()
+        if not ret:
             break
 
-        im[ys[start_idx:end_idx], xs[start_idx:end_idx], ps[start_idx:end_idx]] = 200
-
-        poses = lerp_poses(seq_poses, max_t)
+        poses = lerp_poses(seq_poses, ev_surface.max_t)
         poses = event_frame.align_rgb_poses(poses)
 
         for o in poses:
@@ -95,9 +87,6 @@ def main():
 
             # 10 cm sized axes
             cv2.drawFrameAxes(im, event_frame.K, event_frame.cdist, o["cam_R_m2c"], o["cam_t_m2c"], 100)
-
-        max_t += delta_t
-        start_idx = end_idx
 
         cv2.imshow("frame", im)
         k = cv2.waitKey(33)

@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name='ycbev_toolkit',
-      version='1.0.1',
+      version='1.1.0',
       description='A Python toolkit for loading and processing event data from the YCB-Ev dataset.',
       author='Pavel Rojtberg',
       url='https://github.com/paroj/ycbev',

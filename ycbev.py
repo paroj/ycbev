@@ -3,6 +3,7 @@
 
 import copy
 import json
+import bisect
 
 import numpy as np
 import cv2
@@ -121,3 +122,42 @@ def read_ply_xyz(filename):
 def bbox_from_xyz(K, cdist, R, t, xyz):
     pts_2d = cv2.projectPoints(xyz, R, t, K, cdist)[0].reshape(-1, 2).astype(np.int32)
     return pts_2d.min(axis=0), pts_2d.max(axis=0)
+
+class EvSurfaceConverter:
+    def __init__(self, data, imsize, surface_fps=30):
+        self.imshape = (imsize[1], imsize[0], 3)
+
+        self.delta_t=1000000//surface_fps
+        self.start_idx = 0
+        self.max_t = data[0][0] + self.delta_t
+        self.data = data
+
+    def get(self, k):
+        if k == cv2.CAP_PROP_FRAME_WIDTH:
+            return self.imshape[1]
+        elif k == cv2.CAP_PROP_FRAME_HEIGHT:
+            return self.imshape[0]
+        elif k == cv2.CAP_PROP_FPS:
+            return 1000000 // self.delta_t
+        else:
+            return 0
+
+    def release(self):
+        self.data = None
+
+    def read(self):
+        ts, xs, ys, ps = self.data
+        end_idx = bisect.bisect(ts, self.max_t, lo=self.start_idx)
+
+        if self.start_idx == end_idx:
+            return False, None  # no more events
+
+        im = np.zeros(self.imshape, dtype=np.uint8)
+        cur_ts = ts[self.start_idx:end_idx] - ts[self.start_idx]  # normalize for current frame
+        ev_vals = cv2.convertScaleAbs(cur_ts, alpha=255/self.delta_t).ravel()
+        im[ys[self.start_idx:end_idx], xs[self.start_idx:end_idx], ps[self.start_idx:end_idx]] = ev_vals
+
+        self.max_t += self.delta_t
+        self.start_idx = end_idx
+
+        return True, im
