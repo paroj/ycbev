@@ -149,10 +149,16 @@ class EvSurfaceConverter:
         ts, xs, ys, ps = self.data
         end_idx = bisect.bisect(ts, self.max_t, lo=self.start_idx)
 
-        if self.start_idx == end_idx:
+        if self.start_idx == len(ts):
             return False, None  # no more events
 
         im = np.zeros(self.imshape, dtype=np.uint8)
+
+        if self.start_idx == end_idx:
+            # no events in this interval
+            self.max_t += self.delta_t
+            return True, im
+
         cur_ts = ts[self.start_idx:end_idx] - ts[self.start_idx]  # normalize for current frame
         ev_vals = cv2.convertScaleAbs(cur_ts, alpha=255/self.delta_t).ravel()
         im[ys[self.start_idx:end_idx], xs[self.start_idx:end_idx], ps[self.start_idx:end_idx]] = ev_vals
