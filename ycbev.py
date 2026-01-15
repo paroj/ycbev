@@ -23,7 +23,7 @@ def load_event_data(path):
 
     XMASK = 0x3FFF
     YMASK = 0x3FFF << 14
-    PMASK = 0xF << 28
+    PMASK = np.uint32(0xF << 28)
 
     xs = data[:, 1] & XMASK
     ys = (data[:, 1] & YMASK) >> 14
